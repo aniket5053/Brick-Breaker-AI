@@ -17,11 +17,11 @@ MOVE_DELAY = 0.01  # Delay between movements in seconds
 
 def main():
     print("Please choose a level from 1 to 5")
-    print("Level 1: Reflects at standard angle and standard speed")
-    print("Level 2: Reflects at standard angle and a slightly higher speed")
-    print("Level 3: Reflects at steeper angle and higher speed")
-    print("Level 4: Reflects at a random angle every time and standard speed")
-    print("Level 5: There are obstacles in the way of all the bricks")
+    print("Level 1: Standard angle and speed")
+    print("Level 2: Standard angle, higher speed")
+    print("Level 3: Steeper angle, higher speed")
+    print("Level 4: Random angles, standard speed")
+    print("Level 5: Moving obstacles between bricks")
     lev = int(input("Please enter level number: "))
     if lev == 1:
         level_1_to_4([-3], [8], 1/50)
@@ -34,7 +34,169 @@ def main():
     elif lev == 5:
         level_5([-3], [12], 1/60)
 
-def level_5(dx_orig, dy_orig, pause):
+def level_1_to_4(dx_orig, dy_orig, pause, update_callback=None, get_move_callback=None):
+    dx = list(dx_orig)
+    dy = list(dy_orig)
+    local_dir = os.path.dirname(__file__)
+
+    canvas = make_canvas(CANVAS_WIDTH, CANVAS_HEIGHT, 'bounce')
+    ball = canvas.create_oval(0, 100, BALL_SIZE, BALL_SIZE + 100, fill='black')
+    img1 = ImageTk.PhotoImage(Image.open(os.path.join(local_dir, "Images/paddle.png")))
+    paddle = canvas.create_image(0, PADDLE_Y, anchor="nw", image=img1)
+    score = 0
+    blockline1 = []
+    blockline2 = []
+    blockline3 = []
+    blocks = [blockline1, blockline2, blockline3]
+    img = ImageTk.PhotoImage(Image.open(os.path.join(local_dir, "Images/bricks.png")))
+    for i in range(3):
+        for j in range(CANVAS_WIDTH // BLOCK_WIDTH):
+            blocks[i].append(canvas.create_image(j * BLOCK_WIDTH, i * BLOCK_HEIGHT, anchor="nw", image=img))
+
+    display = canvas.create_text(CANVAS_WIDTH - 140, 20, anchor='w', font='Courier 20', text='Score = ' + (str(score)))
+
+    update_y = dy[random.randint(0, len(dy)-1)]
+    update_x = dx[random.randint(0, len(dx)-1)]
+
+    # Add keyboard event bindings (if not using AI)
+    keys_pressed = {'Left': False, 'Right': False}
+    last_move_time = time.time()
+    move_paddle_id = None
+
+    def key_pressed(event):
+        if event.keysym in keys_pressed:
+            keys_pressed[event.keysym] = True
+
+    def key_released(event):
+        if event.keysym in keys_pressed:
+            keys_pressed[event.keysym] = False
+
+    def move_paddle():
+        nonlocal last_move_time, move_paddle_id
+        if not canvas.winfo_exists():  # Check if canvas still exists
+            return
+        current_time = time.time()
+        if current_time - last_move_time >= MOVE_DELAY:
+            current_x = get_left_x(canvas, paddle)
+            if keys_pressed['Left'] and current_x > 0:
+                canvas.moveto(paddle, current_x - PADDLE_SPEED, PADDLE_Y)
+            if keys_pressed['Right'] and current_x < CANVAS_WIDTH - PADDLE_WIDTH:
+                canvas.moveto(paddle, current_x + PADDLE_SPEED, PADDLE_Y)
+            last_move_time = current_time
+        move_paddle_id = canvas.after(10, move_paddle)  # Store the after ID
+
+    # If we're not using AI, use keyboard controls
+    if get_move_callback is None:
+        canvas.master.bind('<KeyPress>', key_pressed)
+        canvas.master.bind('<KeyRelease>', key_released)
+        canvas.master.focus_set()
+        move_paddle()  # Start the continuous movement loop
+    
+    game_over = False
+    while not (at_bottom_border(canvas, ball)) and not (empty(canvas)) and not game_over:
+        # If using AI, get the paddle move from the callback
+        if get_move_callback is not None:
+            move_direction = get_move_callback()
+            current_x = get_left_x(canvas, paddle)
+            if move_direction < 0 and current_x > 0:  # Left
+                canvas.moveto(paddle, current_x - PADDLE_SPEED, PADDLE_Y)
+            elif move_direction > 0 and current_x < CANVAS_WIDTH - PADDLE_WIDTH:  # Right
+                canvas.moveto(paddle, current_x + PADDLE_SPEED, PADDLE_Y)
+        
+        if at_top_border(canvas, ball):
+            for i in range(len(dy)):
+                dy[i] = -dy[i]
+            update_y = dy[random.randint(0, len(dy)-1)]
+            canvas.moveto(ball, get_left_x(canvas, ball), get_top_y(canvas, ball) + 2)
+
+        if hit_paddle(canvas, ball, paddle):
+            for i in range(len(dy)):
+                dy[i] = -dy[i]
+            update_y = dy[random.randint(0, len(dy)-1)]
+            update_x = dx[random.randint(0, len(dx) - 1)]
+            canvas.moveto(ball, get_left_x(canvas, ball), get_top_y(canvas, ball) - 2)
+
+        if hit_block(canvas, ball) and not (hit_paddle(canvas, ball, paddle)):
+            canvas.delete(display)
+            for i in range(len(dy)):
+                dy[i] = -dy[i]
+            update_y = dy[random.randint(0, len(dy)-1)]
+            score += delete_block(canvas, ball, display)
+            display = canvas.create_text(CANVAS_WIDTH - 140, 20, anchor='w', font='Courier 20',
+                                         text='Score = ' + (str(score)))
+            update_x = dx[random.randint(0, len(dx) - 1)]
+
+        if at_left_border(canvas, ball):
+            for i in range(len(dx)):
+                dx[i] = -dx[i]
+            update_x = -update_x
+            canvas.moveto(ball, get_left_x(canvas, ball) + 2, get_top_y(canvas, ball))
+
+        if at_right_border(canvas, ball):
+            for i in range(len(dx)):
+                dx[i] = -dx[i]
+            update_x = -update_x
+            canvas.moveto(ball, get_left_x(canvas, ball) - 2, get_top_y(canvas, ball))
+
+        # update
+        canvas.move(ball, update_x, update_y)
+        canvas.update()
+
+        # If using AI, update the game state through the callback
+        if update_callback is not None:
+            # Get the current state of all bricks
+            bricks = []
+            for item in canvas.find_all():
+                if item != ball and item != paddle and item != display:
+                    coords = canvas.coords(item)
+                    if len(coords) >= 2:  # Valid coordinates
+                        bricks.append((coords[0], coords[1]))
+            
+            # Check if game is over
+            if at_bottom_border(canvas, ball):
+                game_over = True
+                
+            # Update the AI with the current game state
+            update_callback(
+                (get_left_x(canvas, ball), get_top_y(canvas, ball)),  # ball position
+                get_left_x(canvas, paddle),  # paddle position
+                score,  # current score
+                bricks,  # brick positions
+                game_over  # game over flag
+            )
+            
+            # If AI client has decided to close the game
+            if game_over:
+                break
+
+        # pause
+        time.sleep(pause)
+
+    # Game Over Screen
+    canvas.create_text(125, 250, anchor='w', font='Courier 51', text='GAME OVER!')
+    canvas.delete(display)
+    canvas.create_text(200, 300, anchor='w', font='Courier 30',
+                                 text='Score = ' + (str(score)))
+    canvas.delete(paddle)
+    canvas.delete(ball)
+
+    # Cancel the move_paddle loop
+    if move_paddle_id is not None:
+        canvas.after_cancel(move_paddle_id)
+
+    # Restart Button
+    def restart():
+        canvas.master.destroy()
+        level_1_to_4(dx_orig, dy_orig, pause)
+    restart_btn = tkinter.Button(canvas, text="Restart", command=restart)
+    canvas.create_window(CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 50, window=restart_btn)
+
+    if update_callback is None:  # Only enter mainloop if not called from AI
+        canvas.mainloop()
+    
+    return canvas
+
+def level_5(dx_orig, dy_orig, pause, update_callback=None, get_move_callback=None):
     dx = list(dx_orig)
     dy = list(dy_orig)
     local_dir = os.path.dirname(__file__)
@@ -66,7 +228,7 @@ def level_5(dx_orig, dy_orig, pause):
     update_y = dy[random.randint(0, len(dy)-1)]
     update_x = dx[random.randint(0, len(dx)-1)]
 
-    # Add keyboard event bindings
+    # Add keyboard event bindings (if not using AI)
     keys_pressed = {'Left': False, 'Right': False}
     last_move_time = time.time()
     move_paddle_id = None
@@ -93,12 +255,24 @@ def level_5(dx_orig, dy_orig, pause):
             last_move_time = current_time
         move_paddle_id = canvas.after(10, move_paddle)  # Store the after ID
 
-    canvas.master.bind('<KeyPress>', key_pressed)
-    canvas.master.bind('<KeyRelease>', key_released)
-    canvas.master.focus_set()
-    move_paddle()  # Start the continuous movement loop
+    # If we're not using AI, use keyboard controls
+    if get_move_callback is None:
+        canvas.master.bind('<KeyPress>', key_pressed)
+        canvas.master.bind('<KeyRelease>', key_released)
+        canvas.master.focus_set()
+        move_paddle()  # Start the continuous movement loop
+    
+    game_over = False
+    while not (at_bottom_border(canvas, ball)) and not (empty(canvas)) and not game_over:
+        # If using AI, get the paddle move from the callback
+        if get_move_callback is not None:
+            move_direction = get_move_callback()
+            current_x = get_left_x(canvas, paddle)
+            if move_direction < 0 and current_x > 0:  # Left
+                canvas.moveto(paddle, current_x - PADDLE_SPEED, PADDLE_Y)
+            elif move_direction > 0 and current_x < CANVAS_WIDTH - PADDLE_WIDTH:  # Right
+                canvas.moveto(paddle, current_x + PADDLE_SPEED, PADDLE_Y)
 
-    while not (at_bottom_border(canvas, ball)) and not (empty(canvas)):
         if get_left_x(canvas, stone1) > (CANVAS_WIDTH - BLOCK_WIDTH) or get_left_x(canvas, stone1) < 0:
             update_stone1 = -update_stone1
         if get_left_x(canvas, stone2) > (CANVAS_WIDTH - BLOCK_WIDTH) or get_left_x(canvas, stone2) < 0:
@@ -148,6 +322,38 @@ def level_5(dx_orig, dy_orig, pause):
         canvas.move(ball, update_x, update_y)
         canvas.update()
 
+        # If using AI, update the game state through the callback
+        if update_callback is not None:
+            # Get the current state of all bricks and stones
+            bricks = []
+            stones = []
+            for item in canvas.find_all():
+                if item != ball and item != paddle and item != display:
+                    coords = canvas.coords(item)
+                    if len(coords) >= 2:  # Valid coordinates
+                        if item in [stone1, stone2, stone3]:
+                            stones.append((coords[0], coords[1]))
+                        else:
+                            bricks.append((coords[0], coords[1]))
+            
+            # Check if game is over
+            if at_bottom_border(canvas, ball):
+                game_over = True
+                
+            # Update the AI with the current game state
+            update_callback(
+                (get_left_x(canvas, ball), get_top_y(canvas, ball)),  # ball position
+                get_left_x(canvas, paddle),  # paddle position
+                score,  # current score
+                bricks,  # brick positions
+                stones,  # stone positions
+                game_over  # game over flag
+            )
+            
+            # If AI client has decided to close the game
+            if game_over:
+                break
+
         # pause
         time.sleep(pause)
 
@@ -170,127 +376,10 @@ def level_5(dx_orig, dy_orig, pause):
     restart_btn = tkinter.Button(canvas, text="Restart", command=restart)
     canvas.create_window(CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 50, window=restart_btn)
 
-    canvas.mainloop()
-
-def level_1_to_4(dx_orig, dy_orig, pause):
-    dx = list(dx_orig)
-    dy = list(dy_orig)
-    local_dir = os.path.dirname(__file__)
-
-    canvas = make_canvas(CANVAS_WIDTH, CANVAS_HEIGHT, 'bounce')
-    ball = canvas.create_oval(0, 100, BALL_SIZE, BALL_SIZE + 100, fill='black')
-    img1 = ImageTk.PhotoImage(Image.open(os.path.join(local_dir, "Images/paddle.png")))
-    paddle = canvas.create_image(0, PADDLE_Y, anchor="nw", image=img1)
-    score = 0
-    blockline1 = []
-    blockline2 = []
-    blockline3 = []
-    blocks = [blockline1, blockline2, blockline3]
-    img = ImageTk.PhotoImage(Image.open(os.path.join(local_dir, "Images/bricks.png")))
-    for i in range(3):
-        for j in range(CANVAS_WIDTH // BLOCK_WIDTH):
-            blocks[i].append(canvas.create_image(j * BLOCK_WIDTH, i * BLOCK_HEIGHT, anchor="nw", image=img))
-
-    display = canvas.create_text(CANVAS_WIDTH - 140, 20, anchor='w', font='Courier 20', text='Score = ' + (str(score)))
-
-    update_y = dy[random.randint(0, len(dy)-1)]
-    update_x = dx[random.randint(0, len(dx)-1)]
-
-    # Add keyboard event bindings
-    keys_pressed = {'Left': False, 'Right': False}
-    last_move_time = time.time()
-    move_paddle_id = None
-
-    def key_pressed(event):
-        if event.keysym in keys_pressed:
-            keys_pressed[event.keysym] = True
-
-    def key_released(event):
-        if event.keysym in keys_pressed:
-            keys_pressed[event.keysym] = False
-
-    def move_paddle():
-        nonlocal last_move_time, move_paddle_id
-        if not canvas.winfo_exists():  # Check if canvas still exists
-            return
-        current_time = time.time()
-        if current_time - last_move_time >= MOVE_DELAY:
-            current_x = get_left_x(canvas, paddle)
-            if keys_pressed['Left'] and current_x > 0:
-                canvas.moveto(paddle, current_x - PADDLE_SPEED, PADDLE_Y)
-            if keys_pressed['Right'] and current_x < CANVAS_WIDTH - PADDLE_WIDTH:
-                canvas.moveto(paddle, current_x + PADDLE_SPEED, PADDLE_Y)
-            last_move_time = current_time
-        move_paddle_id = canvas.after(10, move_paddle)  # Store the after ID
-
-    canvas.master.bind('<KeyPress>', key_pressed)
-    canvas.master.bind('<KeyRelease>', key_released)
-    canvas.master.focus_set()
-    move_paddle()  # Start the continuous movement loop
-
-    while not (at_bottom_border(canvas, ball)) and not (empty(canvas)):
-        if at_top_border(canvas, ball):
-            for i in range(len(dy)):
-                dy[i] = -dy[i]
-            update_y = dy[random.randint(0, len(dy)-1)]
-            canvas.moveto(ball, get_left_x(canvas, ball), get_top_y(canvas, ball) + 2)
-
-        if hit_paddle(canvas, ball, paddle):
-            for i in range(len(dy)):
-                dy[i] = -dy[i]
-            update_y = dy[random.randint(0, len(dy)-1)]
-            update_x = dx[random.randint(0, len(dx) - 1)]
-            canvas.moveto(ball, get_left_x(canvas, ball), get_top_y(canvas, ball) - 2)
-
-        if hit_block(canvas, ball) and not (hit_paddle(canvas, ball, paddle)):
-            canvas.delete(display)
-            for i in range(len(dy)):
-                dy[i] = -dy[i]
-            update_y = dy[random.randint(0, len(dy)-1)]
-            score += delete_block(canvas, ball, display)
-            display = canvas.create_text(CANVAS_WIDTH - 140, 20, anchor='w', font='Courier 20',
-                                         text='Score = ' + (str(score)))
-            update_x = dx[random.randint(0, len(dx) - 1)]
-
-        if at_left_border(canvas, ball):
-            for i in range(len(dx)):
-                dx[i] = -dx[i]
-            update_x = -update_x
-            canvas.moveto(ball, get_left_x(canvas, ball) + 2, get_top_y(canvas, ball))
-
-        if at_right_border(canvas, ball):
-            for i in range(len(dx)):
-                dx[i] = -dx[i]
-            update_x = -update_x
-            canvas.moveto(ball, get_left_x(canvas, ball) - 2, get_top_y(canvas, ball))
-
-        # update
-        canvas.move(ball, update_x, update_y)
-        canvas.update()
-
-        # pause
-        time.sleep(pause)
-
-    # Game Over Screen
-    canvas.create_text(125, 250, anchor='w', font='Courier 51', text='GAME OVER!')
-    canvas.delete(display)
-    canvas.create_text(200, 300, anchor='w', font='Courier 30',
-                                 text='Score = ' + (str(score)))
-    canvas.delete(paddle)
-    canvas.delete(ball)
-
-    # Cancel the move_paddle loop
-    if move_paddle_id is not None:
-        canvas.after_cancel(move_paddle_id)
-
-    # Restart Button
-    def restart():
-        canvas.master.destroy()
-        level_1_to_4(dx_orig, dy_orig, pause)
-    restart_btn = tkinter.Button(canvas, text="Restart", command=restart)
-    canvas.create_window(CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 50, window=restart_btn)
-
-    canvas.mainloop()
+    if update_callback is None:  # Only enter mainloop if not called from AI
+        canvas.mainloop()
+    
+    return canvas
 
 def at_top_border(canvas, ball):
     curr_y = get_top_y(canvas, ball)
@@ -344,6 +433,10 @@ def delete_block(canvas, ball, display):
             count += 1
     return count
 
+def empty(canvas):
+    overlap = canvas.find_overlapping(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+    return len(overlap) < 4
+
 def delete_block5(canvas, ball, display, stone1, stone2, stone3):
     ball_coords = canvas.coords(ball)
     overlap = canvas.find_overlapping(ball_coords[0], ball_coords[1], ball_coords[2], ball_coords[3])
@@ -353,13 +446,6 @@ def delete_block5(canvas, ball, display, stone1, stone2, stone3):
             canvas.delete(overlap[i])
             count += 1
     return count
-
-def empty(canvas):
-    overlap = canvas.find_overlapping(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
-    return len(overlap) < 4
-
-
-
 
 def make_canvas(width, height, title):
     """
