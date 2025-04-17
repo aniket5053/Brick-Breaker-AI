@@ -41,8 +41,8 @@ LEVEL_COLOR_THEMES: List[Optional[List[Tuple[int, int, int]]]] = [
 #  Hard‑coded layouts
 # ----------------------------------------------------------------
 HARDCODED_LAYOUTS = {
-    0: [(x, y) for x in range(10) for y in range(3)],                # 10x3 grid
-    1: [(x, y) for x in range(10) for y in [0, 2, 4]],               # Striped layout
+    0: [(x, y) for x in range(10) for y in range(3)],           # 10x3 grid
+    1: [(x, y) for x in range(10) for y in [0, 2, 4]],          # Striped layout
     2: [(x, y) for x in range(0, 10, 2) for y in range(3, 6)] +
        [(x, y) for x in range(1, 10, 2) for y in range(6, 9)],
     3: [(x, y) for y in range(1, 4) for x in range(5)] +
@@ -70,7 +70,7 @@ class Breakout:
                  locked_level: Optional[int] = None):
 
         pygame.init()
-        pygame.display.set_caption("Breakout RL")
+        pygame.display.set_caption("Breakout")
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
         self.clock  = pygame.time.Clock()
         self.font   = pygame.font.SysFont("Comic Sans MS", 14)
@@ -458,9 +458,9 @@ class Breakout:
 
     # attempt‑level getters
     def get_bricks_broken_attempt(self): return self.round_bricks_destroyed
-    def get_current_points(self):       return self.round_points
-    def get_attempt_time(self):         return time.time() - self.round_start_time
-    def get_restart_attempts(self):     return self.restart_attempts
+    def get_current_points(self):        return self.round_points
+    def get_attempt_time(self):          return time.time() - self.round_start_time
+    def get_restart_attempts(self):      return self.restart_attempts
 
 
 # Main test (user input)
@@ -479,7 +479,6 @@ def csv_fields():
     return ["timestamp","game_id","event","level_logged","round_backend",
             "attempts_so_far","restart_attempts","bricks_destroyed_curr",
             "paddle_hits_curr","points_curr","total_points"]
-
 
 def csv_exists(path):
     try:
