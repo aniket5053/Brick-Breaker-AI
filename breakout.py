@@ -11,8 +11,8 @@ from typing import List, Tuple, Optional
 #  Game Constants
 # ----------------------------------------------------------------
 BALL_START_SPEED_DEFAULT = 0
-BALL_ACCELERATION_MIN_DEFAULT = 1
-BALL_ACCELERATION_MAX_DEFAULT = 2
+BALL_ACCELERATION_MIN_DEFAULT = 0
+BALL_ACCELERATION_MAX_DEFAULT = 1
 PADDLE_MOVE_SPEED_DEFAULT = 3
 BALL_HIT_OFFSET_MULTIPLIER_DEFAULT = 2.5
 PADDLE_VELOCITY_MULTIPLIER_DEFAULT = 0.5
@@ -105,6 +105,7 @@ class Breakout:
         self.paused = False
         self.running = True
         self.show_game_over = False
+        self.round_lost = False
         self.log_to_csv = log_to_csv
 
         # Others
@@ -304,7 +305,9 @@ class Breakout:
         if self.ball.bottom >= HEIGHT:
             done = True
             self.round_points = 0
+            self.round_lost = True
 
+        self.round_lost = False
         return self.get_state(), points_earned, done
 
     def render(self):
@@ -456,12 +459,13 @@ class Breakout:
     def get_paddle_velocity_multiplier(self): return self.paddle_velocity_multiplier
     def set_paddle_velocity_multiplier(self, v): self.paddle_velocity_multiplier = v
 
-    # attempt‑level getters
-    def get_bricks_broken_attempt(self): return self.round_bricks_destroyed
-    def get_current_points(self):        return self.round_points
-    def get_attempt_time(self):          return time.time() - self.round_start_time
-    def get_restart_attempts(self):      return self.restart_attempts
-
+    def get_bricks_broken_attempt(self):    return self.round_bricks_destroyed
+    def get_current_points(self):           return self.round_points
+    def get_attempt_time(self):             return time.time() - self.round_start_time
+    def get_restart_attempts(self):         return self.restart_attempts
+    def get_current_level(self):            return self.total_levels_logged
+    def get_number_paddle_hits_round(self): return self.round_paddle_hits
+    def get_isRoundLost(self):              return self.round_lost
 
 # Main test (user input)
 if __name__ == "__main__":
