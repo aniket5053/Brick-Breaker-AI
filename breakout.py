@@ -316,6 +316,7 @@ class Breakout:
                     self.total_games_completed += 1
                     self._log_csv(event="game_complete")
                     self.round = 0                  # back to Level 1 for front‑end
+                    self.game_id += 1
                     self.show_game_over = True
 
         # If the ball goes out the bottom, misses the paddle
@@ -429,11 +430,11 @@ class Breakout:
             "game_id": self.game_id,
             "event": event,
             "level_logged": self.total_levels_logged if event == "level_complete" else "-",
-            "round_backend": self.round,
+            "current_level": self.round+1,
             "attempts_so_far": self.total_attempts,
             "restart_attempts": self.restart_attempts,
-            "bricks_destroyed_curr": self.round_bricks_destroyed,
-            "paddle_hits_curr": self.round_paddle_hits,
+            "total_bricks_destroyed": self.total_bricks_destroyed,
+            "total_paddle_hits": self.total_paddle_hits,
             "points_curr": self.round_points,
             "total_points": self.total_points
         }
@@ -486,6 +487,7 @@ class Breakout:
     def get_current_level(self):            return self.total_levels_logged
     def get_number_paddle_hits_round(self): return self.round_paddle_hits
     def get_isRoundLost(self):              return self.round_lost
+    def get_total_attempts_round(self):     return self.total_attempts
 
 # Main test (user input)
 if __name__ == "__main__":
@@ -500,9 +502,10 @@ if __name__ == "__main__":
 
 # CSV Helpers
 def csv_fields():
-    return ["timestamp","game_id","event","level_logged","round_backend",
-            "attempts_so_far","restart_attempts","bricks_destroyed_curr",
-            "paddle_hits_curr","points_curr","total_points"]
+    return ["timestamp", "game_id", "event", "level_logged", "current_level",
+            "attempts_so_far", "restart_attempts", "total_bricks_destroyed", 
+            "total_paddle_hits", "points_curr", "total_points"]
+
 
 def csv_exists(path):
     try:
