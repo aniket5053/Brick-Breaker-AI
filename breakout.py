@@ -15,7 +15,7 @@ BALL_ACCELERATION_MIN_DEFAULT = 0
 BALL_ACCELERATION_MAX_DEFAULT = 1
 PADDLE_MOVE_SPEED_DEFAULT = 3
 BALL_HIT_OFFSET_MULTIPLIER_DEFAULT = 2.5
-PADDLE_VELOCITY_MULTIPLIER_DEFAULT = 0.5
+PADDLE_VELOCITY_MULTIPLIER_DEFAULT = 1
 
 # ----------------------------------------------------------------
 #  Size Constants
@@ -68,12 +68,13 @@ class Breakout:
     def __init__(self, start_level: int = 0,
                  log_to_csv: bool = True,
                  locked_level: Optional[int] = None):
-
-        pygame.init()
-        pygame.display.set_caption("Breakout")
-        self.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-        self.clock  = pygame.time.Clock()
-        self.font   = pygame.font.SysFont("Comic Sans MS", 14)
+        self.render_enabled = True
+        if self.render_enabled:
+                pygame.init()
+                pygame.display.set_caption("Breakout")
+                self.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+                self.clock  = pygame.time.Clock()
+                self.font   = pygame.font.SysFont("Comic Sans MS", 14)
 
         # Window size
         self.window_width, self.window_height = WIDTH, HEIGHT
@@ -133,6 +134,22 @@ class Breakout:
         sys.excepthook = lambda exc_type, exc, tb: self._excepthook(exc_type, exc, tb)
 
         self.reset()
+
+    # Setter to toggle rendering
+    def set_render_enabled(self, enabled: bool):
+        if self.render_enabled == enabled:
+            return
+
+        self.render_enabled = enabled
+
+        if enabled:
+            pygame.init()
+            pygame.display.set_caption("Breakout")
+            self.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+            self.clock  = pygame.time.Clock()
+            self.font   = pygame.font.SysFont("Comic Sans MS", 14)
+        else:
+            pygame.display.quit()
 
     # Layout helper functions
     def _generate_unique_bricks(self, n: int):
@@ -306,11 +323,14 @@ class Breakout:
             done = True
             self.round_points = 0
             self.round_lost = True
-
-        self.round_lost = False
+        else:
+            self.round_lost = False
+        
         return self.get_state(), points_earned, done
 
     def render(self):
+        if not self.render_enabled:
+            return
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 self.log_and_quit(reason="quit_button")
@@ -425,7 +445,7 @@ class Breakout:
             if not file_exists:
                 writer.writeheader()
             writer.writerow(record)
-            print(f"Game metrics saved to '{CSV_FILE}' for event '{str}'")
+            print(f"Game metrics saved to '{CSV_FILE}' for event '{event}'")
 
     def log_and_quit(self, reason="quit"):
         self._log_csv(event=reason)
