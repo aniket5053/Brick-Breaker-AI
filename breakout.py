@@ -4,6 +4,7 @@ import sys
 import time
 import csv
 import signal
+import os
 from datetime import datetime
 from typing import List, Tuple, Optional
 
@@ -124,8 +125,9 @@ class Breakout:
         self.paddle_velocity_multiplier = PADDLE_VELOCITY_MULTIPLIER_DEFAULT
 
         # Ensure CSV header exists (the file is there) before writing
-        if self.log_to_csv and not csv_exists(CSV_FILE):
-            with open(CSV_FILE, "w", newline="") as f:
+        if self.log_to_csv and not csv_exists(os.path.join("output", CSV_FILE)):
+            os.makedirs("output", exist_ok=True)
+            with open(os.path.join("output", CSV_FILE), "w", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=csv_fields())
                 writer.writeheader()
 
@@ -261,6 +263,7 @@ class Breakout:
             offset = (self.ball.centerx - self.paddle.centerx) / (self.paddle.width / 2)
             self.ball_dx += self.ball_hit_offset_multiplier*offset + self.paddle_velocity_multiplier*pv
             self.ball_dx = max(min(self.ball_dx, self.ball_acceleration_max), -self.ball_acceleration_max)
+            self.ball_dx += random.choice([0, 1]) # Prevent cycles by pushing an offset
             self.ball_dy = -abs(self.ball_dy)
             self.total_paddle_hits += 1
             self.round_paddle_hits += 1
@@ -439,14 +442,14 @@ class Breakout:
             "total_points": self.total_points
         }
 
-        file_exists = csv_exists(CSV_FILE)
+        file_exists = csv_exists(os.path.join("output", CSV_FILE))
 
-        with open(CSV_FILE, "a", newline="") as f:
+        with open(os.path.join("output", CSV_FILE), "a", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=csv_fields())
             if not file_exists:
                 writer.writeheader()
             writer.writerow(record)
-            print(f"Game metrics saved to '{CSV_FILE}' for event '{event}'")
+            print(f"Game metrics saved to './output/{CSV_FILE}' for event '{event}'")
 
     def log_and_quit(self, reason="quit"):
         self._log_csv(event=reason)
