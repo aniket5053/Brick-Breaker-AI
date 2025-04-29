@@ -21,7 +21,7 @@ PADDLE_VELOCITY_MULTIPLIER_DEFAULT = 1
 # ----------------------------------------------------------------
 #  Size Constants
 # ----------------------------------------------------------------
-WIDTH, HEIGHT = 400, 360
+WIDTH, HEIGHT = 360, 360
 PADDLE_WIDTH, PADDLE_HEIGHT = 60, 10
 BALL_SIZE = 8
 BRICK_WIDTH, BRICK_HEIGHT = 40, 15
@@ -42,7 +42,7 @@ LEVEL_COLOR_THEMES: List[Optional[List[Tuple[int, int, int]]]] = [
 #  Hard‑coded layouts
 # ----------------------------------------------------------------
 HARDCODED_LAYOUTS = {
-    0: [(x, y) for x in range(10) for y in range(3)],           # 10x3 grid
+    0: [(x, y) for x in range(9) for y in range(3)],           # 10x3 grid
     1: [(x, y) for x in range(10) for y in [0, 2, 4]],          # Striped layout
     2: [(x, y) for x in range(0, 10, 2) for y in range(3, 6)] +
        [(x, y) for x in range(1, 10, 2) for y in range(6, 9)],

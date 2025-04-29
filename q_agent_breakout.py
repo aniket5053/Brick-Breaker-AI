@@ -16,9 +16,10 @@ QLEARN_PLOT = "QLearning_PerformancePlot.png"
 # locked_level=<> add this to breakout init to lock the current level
 # Extend to QLearnerAgent to lock the agent to a level
 class QLearnerAgent:
-    def __init__(self, start_level=0, render=False):
+    def __init__(self, start_level=0, locked_level=None, render=False):
         self.start_level = start_level
-        self.env = Breakout(self.start_level, log_to_csv=True)
+        self.locked_level = locked_level
+        self.env = Breakout(start_level=self.start_level, locked_level=self.locked_level, log_to_csv=True)
         self.env.set_render_enabled(render)
 
         self.q_table = self._load_q_table()

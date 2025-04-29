@@ -2,7 +2,7 @@ import pygame
 from breakout import Breakout
 
 def main():
-    game = Breakout(start_level=0, log_to_csv=True)
+    game = Breakout(start_level=0, locked_level=0, log_to_csv=True)
     current_state = game.get_state()
 
     while True:
