@@ -1,0 +1,17 @@
+digraph {
+	node [fontsize=9 height=0.2 shape=circle width=0.2]
+	"Ball X" [fillcolor=lightblue shape=box style=filled]
+	"Ball Y" [fillcolor=lightblue shape=box style=filled]
+	"Ball dX" [fillcolor=lightblue shape=box style=filled]
+	"Ball dY" [fillcolor=lightblue shape=box style=filled]
+	"Paddle X" [fillcolor=lightgreen shape=box style=filled]
+	"Closest Brick Y" [fillcolor=salmon shape=box style=filled]
+	Left [fillcolor=yellow style=filled]
+	Right [fillcolor=yellow style=filled]
+	37 [fillcolor=white style=filled]
+	"Ball X" -> 37 [color=red penwidth=0.9443961480774951 style=solid]
+	"Paddle X" -> 37 [color=green penwidth=0.8473099459855898 style=solid]
+	37 -> Left [color=green penwidth=0.8360432354395299 style=solid]
+	"Closest Brick Y" -> Right [color=red penwidth=0.5727113690901813 style=solid]
+	"Ball dX" -> 37 [color=red penwidth=0.14260804586643966 style=solid]
+}
