@@ -1,3 +1,3 @@
 # DQN Learning
 
-![DQN Brick Breaker](DQN.gif "DQN Attempt")
+![DQN Brick Breaker](dqn.gif "DQN Attempt")
